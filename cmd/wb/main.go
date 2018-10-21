@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"os"
 	"sync"
@@ -24,17 +24,19 @@ func main() {
 
 	srv := http.NewServer(logger)
 	client := http.NewClient(logger)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	wg.Add(1)
 	go func() {
-
 		wg.Wait()
 
-		time.Sleep(5 * time.Second)
-		fmt.Println("hoge")
+		time.Sleep(3 * time.Second)
+
 		if err := client.AuthPocket(addr, consumerKey); err != nil {
 			logger.Panic(err)
 		}
+		cancel()
 	}()
-	srv.Serve(addr, &wg)
+
+	srv.Serve(addr, &wg, ctx)
 }

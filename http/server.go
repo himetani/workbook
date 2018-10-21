@@ -4,8 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
 	"time"
 )
@@ -33,7 +31,7 @@ func NewServer(
 	return server
 }
 
-func (s *Server) Serve(addr string, wg *sync.WaitGroup) {
+func (s *Server) Serve(addr string, wg *sync.WaitGroup, ctx context.Context) {
 	s.logger.Println("Server is starting...")
 
 	srv := &http.Server{
@@ -46,18 +44,16 @@ func (s *Server) Serve(addr string, wg *sync.WaitGroup) {
 	}
 
 	done := make(chan bool)
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
 
 	go func() {
-		<-quit
+		<-ctx.Done()
 		s.logger.Println("Server is shutting down...")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		innerCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		srv.SetKeepAlivesEnabled(false)
-		if err := srv.Shutdown(ctx); err != nil {
+		if err := srv.Shutdown(innerCtx); err != nil {
 			s.logger.Fatalf("Could not gracefully shutdown the server: %v\n", err)
 		}
 		close(done)
