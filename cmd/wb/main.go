@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/himetani/workbook/http"
+	"github.com/himetani/workbook/pocket"
 )
 
 var (
@@ -17,26 +19,35 @@ var (
 
 func main() {
 	var (
-		wg          sync.WaitGroup
-		consumerKey = "dummy"
+		svrStartUp  sync.WaitGroup
+		authCode    sync.WaitGroup
+		consumerKey = os.Getenv("WB_CONSUMER_KEY")
 		addr        = ":8080"
 	)
 
-	srv := http.NewServer(logger)
-	client := http.NewClient(logger)
+	client := pocket.NewClient("http://localhost:8080/pocket/redirected", consumerKey, logger)
+	srv := http.NewServer(client, logger)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	wg.Add(1)
+	svrStartUp.Add(1)
+	authCode.Add(1)
 	go func() {
-		wg.Wait()
+		svrStartUp.Wait()
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 
-		if err := client.AuthPocket(addr, consumerKey); err != nil {
+		if err := client.GetRequestCode(); err != nil {
 			logger.Panic(err)
 		}
+
+		fmt.Println("")
+		fmt.Println("Access to https://getpocket.com/auth/authorize?request_token=" + client.RequestCode + "&redirect_uri=" + client.RedirectURL)
+
+		authCode.Wait()
+
 		cancel()
 	}()
 
-	srv.Serve(addr, &wg, ctx)
+	srv.Serve(addr, &svrStartUp, &authCode, ctx)
+	authCode.Wait()
 }

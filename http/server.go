@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/himetani/workbook/pocket"
 )
 
 const (
@@ -13,26 +15,29 @@ const (
 )
 
 type Server struct {
+	client *pocket.Client
 	logger *log.Logger
 	router *http.ServeMux
 }
 
 func NewServer(
+	client *pocket.Client,
 	logger *log.Logger,
 ) *Server {
 	router := http.NewServeMux()
 
 	server := &Server{
+		client: client,
 		logger: logger,
 		router: router,
 	}
 
-	server.routes()
 	return server
 }
 
-func (s *Server) Serve(addr string, wg *sync.WaitGroup, ctx context.Context) {
+func (s *Server) Serve(addr string, svrStartUp, authCode *sync.WaitGroup, ctx context.Context) {
 	s.logger.Println("Server is starting...")
+	s.routes(authCode)
 
 	srv := &http.Server{
 		Addr:         addr,
@@ -59,7 +64,7 @@ func (s *Server) Serve(addr string, wg *sync.WaitGroup, ctx context.Context) {
 		close(done)
 	}()
 
-	wg.Done()
+	svrStartUp.Done()
 	s.logger.Println("Server is ready to handle requests at", srv.Addr)
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

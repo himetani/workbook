@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"sync"
 )
 
 func (s *Server) index() http.HandlerFunc {
@@ -12,9 +13,10 @@ func (s *Server) index() http.HandlerFunc {
 	}
 }
 
-func (s *Server) auth() http.HandlerFunc {
+func (s *Server) pocketRedirected(wg *sync.WaitGroup) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		s.logger.Printf("Redirect to /")
-		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+		s.logger.Printf("Authorized")
+		s.client.GetAccessToken()
+		fmt.Fprintf(w, "Authorized")
 	}
 }
