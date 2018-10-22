@@ -1,15 +1,10 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
-	"sync"
-	"time"
 
-	"github.com/himetani/workbook/http"
-	"github.com/himetani/workbook/pocket"
+	"github.com/himetani/workbook/cmd"
 )
 
 var (
@@ -17,6 +12,11 @@ var (
 	addr   = ":8080"
 )
 
+func main() {
+	cmd.Execute()
+}
+
+/*
 func main() {
 	var (
 		svrStartUp  sync.WaitGroup
@@ -51,3 +51,4 @@ func main() {
 	srv.Serve(addr, &svrStartUp, &authCode, ctx)
 	authCode.Wait()
 }
+*/
