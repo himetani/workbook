@@ -8,16 +8,16 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 )
 
 type Client struct {
-	accessToken string
+	AccessToken string
 	client      *http.Client
 	consumerKey string
 	RedirectURL string
 	RequestCode string
 	logger      *log.Logger
+	Username    string
 }
 
 func newRequest(path, jsonstr string) (*http.Request, error) {
@@ -49,8 +49,8 @@ func (c *Client) GetRequestCode() error {
 	defer resp.Body.Close()
 
 	var r io.Reader = resp.Body
-	r = io.TeeReader(r, os.Stderr)
-	fmt.Println("")
+	//r = io.TeeReader(r, os.Stderr)
+	//fmt.Println("")
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Status code was not 200. got=%d", resp.StatusCode)
@@ -65,38 +65,41 @@ func (c *Client) GetRequestCode() error {
 	return nil
 }
 
-func (c *Client) GetAccessToken() (string, string, error) {
+func (c *Client) GetAccessToken() error {
 	c.logger.Printf("Get AccessToken, consumerKey: %s, requestCode %s\n", c.consumerKey, c.RequestCode)
 
 	if c.consumerKey == "" || c.RequestCode == "" {
-		return "", "", errors.New("consumerKey or requestCode is empty")
+		return errors.New("consumerKey or requestCode is empty")
 	}
 
 	jsonstr := "{\"consumer_key\": \"" + c.consumerKey + "\", \"code\": \"" + c.RequestCode + "\"}"
 
 	req, err := newRequest("/v3/oauth/authorize", jsonstr)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return "", "", err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("Status code was not 200. got=%d", resp.StatusCode)
+		return fmt.Errorf("Status code was not 200. got=%d", resp.StatusCode)
 	}
 
 	var r io.Reader = resp.Body
-	r = io.TeeReader(r, os.Stderr)
+	//r = io.TeeReader(r, os.Stderr)
 
 	var accessTokenResponse accessTokenResponse
 	if err := json.NewDecoder(r).Decode(&accessTokenResponse); err != nil {
-		return "", "", err
+		return err
 	}
-	return accessTokenResponse.Username, accessTokenResponse.AccessToken, nil
+
+	c.AccessToken = accessTokenResponse.AccessToken
+	c.Username = accessTokenResponse.Username
+	return nil
 }
 
 func NewClient(redirectURL, consumerKey string, logger *log.Logger) *Client {

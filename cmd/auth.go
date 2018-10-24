@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -12,12 +11,11 @@ import (
 	"github.com/himetani/workbook/pocket"
 )
 
-func RunAuth(consumerKey string) error {
+func RunAuth(consumerKey string, logger *log.Logger) error {
 	var (
 		svrStartUp sync.WaitGroup
 		authCode   sync.WaitGroup
 		addr       = ":8080"
-		logger     = log.New(os.Stdout, "Info: ", log.LstdFlags)
 	)
 
 	client := pocket.NewClient("http://localhost:8080/pocket/redirected", consumerKey, logger)
@@ -32,11 +30,11 @@ func RunAuth(consumerKey string) error {
 		time.Sleep(1 * time.Second)
 
 		if err := client.GetRequestCode(); err != nil {
-			logger.Panic(err)
+			logger.Printf("%s\n", err.Error())
+			return
 		}
 
-		fmt.Println("")
-		fmt.Println("Access to https://getpocket.com/auth/authorize?request_token=" + client.RequestCode + "&redirect_uri=" + client.RedirectURL)
+		fmt.Println("=> Access to https://getpocket.com/auth/authorize?request_token=" + client.RequestCode + "&redirect_uri=" + client.RedirectURL)
 
 		authCode.Wait()
 
@@ -44,6 +42,7 @@ func RunAuth(consumerKey string) error {
 	}()
 
 	srv.Serve(addr, &svrStartUp, &authCode, ctx)
+	fmt.Printf("=> Username: %s, AccessToken %s\n", client.Username, client.AccessToken)
 	authCode.Wait()
 
 	return nil

@@ -18,5 +18,6 @@ func (s *Server) pocketRedirected(wg *sync.WaitGroup) http.HandlerFunc {
 		s.logger.Printf("Authorized")
 		s.client.GetAccessToken()
 		fmt.Fprintf(w, "Authorized")
+		wg.Done()
 	}
 }

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -25,6 +27,7 @@ func Execute() {
 func init() {
 	var (
 		consumerKey string
+		verbose     bool
 	)
 
 	var authCmd = &cobra.Command{
@@ -32,12 +35,18 @@ func init() {
 		Short: "Get authorized information of pocket",
 		Long:  `Get authorized information of pocket`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return RunAuth(consumerKey)
+			var logger *log.Logger = log.New(ioutil.Discard, "Info: ", log.LstdFlags)
+			if verbose {
+				logger = log.New(os.Stdout, "Info: ", log.LstdFlags)
+			}
+
+			return RunAuth(consumerKey, logger)
 		},
 	}
 
 	authCmd.Flags().StringVarP(&consumerKey, "consumerKey", "c", "", "consumer key")
-	authCmd.MarkFlagRequired("sqlite")
+	authCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "verbose log message")
+	authCmd.MarkFlagRequired("consumerKey")
 
 	rootCmd.AddCommand(authCmd)
 }
